@@ -1,0 +1,827 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Painel da Pesquisa de Clientes — Fercomp</title>
+<meta name="description" content="Painel interno da equipe Fercomp para analisar as respostas da pesquisa de clientes.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="config.js"></script>
+<style>
+:root{
+  --laranja:#FB8324; --azul:#8FAAC1; --fundo:#E6E9EC; --escuro:#2F373E; --branco:#fff;
+  --verde:#4CAF72; --amarelo:#E7B84B; --vermelho:#D9644E;
+  --raio:12px; --sombra:0 2px 10px rgba(47,55,62,.10);
+}
+*{box-sizing:border-box;}
+body{margin:0;font-family:'Montserrat',system-ui,Arial,sans-serif;font-weight:500;background:var(--fundo);color:var(--escuro);line-height:1.4;}
+h1,h2,h3{font-weight:800;margin:0;}
+button{font-family:inherit;cursor:pointer;}
+a{color:var(--laranja);}
+
+/* ---------- Cabeçalho ---------- */
+header{background:var(--escuro);color:#fff;padding:14px 20px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;position:sticky;top:0;z-index:20;}
+header .logo{font-weight:800;color:var(--laranja);font-size:22px;letter-spacing:1px;}
+header .logo img{max-height:34px;vertical-align:middle;}
+header h1{font-size:17px;font-weight:700;flex:1;min-width:180px;}
+header .acoes{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+.mini{font-size:12px;color:#cdd4da;font-weight:600;}
+
+.btn{border:none;border-radius:10px;font-weight:700;font-size:14px;padding:9px 14px;background:var(--laranja);color:#fff;}
+.btn.sec{background:var(--azul);}
+.btn.ghost{background:transparent;border:1.5px solid #5a636b;color:#fff;}
+.btn:disabled{opacity:.5;cursor:default;}
+
+.wrap{max-width:1180px;margin:0 auto;padding:18px;}
+
+/* ---------- Login ---------- */
+#login{max-width:400px;margin:60px auto;background:#fff;border-radius:var(--raio);box-shadow:var(--sombra);padding:28px;text-align:center;}
+#login h2{margin-bottom:6px;}
+#login p{color:#6a747c;font-size:14px;font-weight:600;margin-top:0;}
+#login input{width:100%;padding:13px;border:2px solid #cfd6dc;border-radius:10px;font-size:16px;font-family:inherit;margin:14px 0;}
+#login .btn{width:100%;padding:13px;}
+#login .erro{color:var(--vermelho);font-weight:700;font-size:13px;min-height:18px;}
+
+/* ---------- Faixa demo ---------- */
+.faixa-demo{background:var(--amarelo);color:#5a4506;font-weight:800;text-align:center;padding:9px;font-size:13px;}
+
+/* ---------- Filtros ---------- */
+.filtros{background:#fff;border-radius:var(--raio);box-shadow:var(--sombra);padding:14px;margin-bottom:16px;}
+.filtros-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;}
+.campo label{display:block;font-size:11px;font-weight:700;color:#6a747c;margin-bottom:3px;text-transform:uppercase;letter-spacing:.3px;}
+.campo select,.campo input{width:100%;padding:8px;border:1.5px solid #cfd6dc;border-radius:8px;font-family:inherit;font-size:13px;font-weight:600;background:#fff;color:var(--escuro);}
+.filtros-rodape{display:flex;justify-content:space-between;align-items:center;margin-top:12px;flex-wrap:wrap;gap:8px;}
+.contagem{font-weight:700;font-size:14px;}
+.aviso-amostra{background:#fbeeca;color:#7a5e12;font-weight:700;font-size:12.5px;padding:7px 10px;border-radius:8px;margin-top:10px;}
+
+/* ---------- Cards KPI ---------- */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:18px;}
+.kpi{background:#fff;border-radius:var(--raio);box-shadow:var(--sombra);padding:16px;}
+.kpi .rotulo{font-size:12px;font-weight:700;color:#6a747c;text-transform:uppercase;letter-spacing:.3px;}
+.kpi .valor{font-size:34px;font-weight:800;margin-top:4px;line-height:1;}
+.kpi .sub{font-size:12px;font-weight:600;color:#6a747c;margin-top:6px;}
+.barra-nps{display:flex;height:10px;border-radius:99px;overflow:hidden;margin-top:10px;}
+.barra-nps span{display:block;height:100%;}
+
+/* ---------- Seções/cartões ---------- */
+.card{background:#fff;border-radius:var(--raio);box-shadow:var(--sombra);padding:18px;margin-bottom:16px;}
+.card.destaque{border:2px solid var(--laranja);}
+.card h2{font-size:17px;margin-bottom:4px;}
+.card .desc{font-size:12.5px;color:#6a747c;font-weight:600;margin-bottom:14px;}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+@media(max-width:760px){ .grid-2{grid-template-columns:1fr;} }
+.chart-box{position:relative;width:100%;}
+
+/* ---------- Tabela ---------- */
+table{width:100%;border-collapse:collapse;font-size:13px;}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid #e6e9ec;}
+th{font-weight:700;color:#6a747c;font-size:11.5px;text-transform:uppercase;}
+tr:hover td{background:#f6f8fa;}
+
+/* ---------- Abas abertas ---------- */
+.abas{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;}
+.aba{background:var(--fundo);border:none;border-radius:99px;padding:7px 13px;font-weight:700;font-size:12.5px;color:var(--escuro);}
+.aba.ativa{background:var(--escuro);color:#fff;}
+.nuvem{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:14px;}
+.palavra{background:var(--fundo);border:1.5px solid #d5dce1;border-radius:99px;padding:5px 11px;font-weight:700;font-size:12.5px;color:var(--escuro);}
+.palavra.ativa{background:var(--laranja);border-color:var(--laranja);color:#fff;}
+.resposta-aberta{background:#f8fafb;border-left:3px solid var(--azul);border-radius:0 8px 8px 0;padding:10px 12px;margin-bottom:8px;}
+.resposta-aberta .meta{font-size:11px;font-weight:700;color:#8a949b;margin-bottom:3px;}
+.filtro-nps{display:flex;gap:6px;margin-bottom:10px;}
+.filtro-nps button{border:1.5px solid #cfd6dc;background:#fff;border-radius:99px;padding:5px 11px;font-weight:700;font-size:12px;}
+.filtro-nps button.ativa{background:var(--azul);border-color:var(--azul);color:#fff;}
+
+.legenda-outro h3{font-size:13px;margin:14px 0 6px;color:var(--laranja);}
+.lista-outro li{font-size:13px;margin-bottom:4px;}
+
+.vazio{text-align:center;color:#9aa4ac;font-weight:600;padding:30px;}
+
+/* ---------- Impressão ---------- */
+@media print{
+  header .acoes, .filtros, .abas, .filtro-nps, .nuvem, #btAtualizar{display:none !important;}
+  body{background:#fff;}
+  .card,.kpi{box-shadow:none;border:1px solid #d5dce1;break-inside:avoid;}
+  header{position:static;}
+  .no-print{display:none !important;}
+}
+</style>
+</head>
+<body>
+
+<!-- ===================== LOGIN ===================== -->
+<div id="login">
+  <div class="logo" style="color:var(--laranja);font-size:26px;font-weight:800;margin-bottom:6px">FERCOMP</div>
+  <h2>Painel da Pesquisa</h2>
+  <p>Digite a senha da equipe para ver os resultados.</p>
+  <input type="password" id="senhaInput" placeholder="Senha" autocomplete="current-password">
+  <div class="erro" id="loginErro"></div>
+  <button class="btn" id="btEntrar">Entrar</button>
+</div>
+
+<!-- ===================== PAINEL ===================== -->
+<div id="painel" style="display:none">
+  <div class="faixa-demo" id="faixaDemo" style="display:none">⚠ MODO DEMONSTRAÇÃO — dados fictícios, só para você ver como o painel funciona.</div>
+  <header>
+    <span class="logo"><img src="logo.png" alt="Fercomp" onerror="this.outerHTML='FERCOMP';"></span>
+    <h1>Painel da Pesquisa de Clientes</h1>
+    <div class="acoes">
+      <span class="mini" id="ultimaAtual"></span>
+      <button class="btn ghost" id="btAtualizar">Atualizar dados</button>
+      <button class="btn sec" id="btCsv">Baixar CSV</button>
+      <button class="btn ghost" id="btImprimir">Imprimir resumo</button>
+      <a class="btn ghost" id="btPlanilha" target="_blank" rel="noopener">Abrir planilha</a>
+      <button class="btn ghost no-print" id="btSair">Sair</button>
+    </div>
+  </header>
+
+  <div class="wrap">
+    <!-- Filtros -->
+    <div class="filtros no-print">
+      <div class="filtros-grid" id="filtrosGrid"></div>
+      <div class="filtros-rodape">
+        <span class="contagem" id="contagem"></span>
+        <button class="btn ghost" style="color:var(--escuro);border-color:#cfd6dc" id="btLimpar">Limpar filtros</button>
+      </div>
+      <div class="aviso-amostra" id="avisoAmostra" style="display:none">⚠ Amostra pequena (menos de 5 respostas). Cuidado ao tirar conclusões.</div>
+    </div>
+
+    <div id="conteudo"></div>
+  </div>
+</div>
+
+<script>
+/* =========================================================================
+   PAINEL DA PESQUISA FERCOMP
+   ========================================================================= */
+
+/* ---- Rótulos reaproveitados (precisam bater com o index.html) ---- */
+var ASPECTOS_Q8 = [
+  {nome:"Preços", chave:"q8_precos"},
+  {nome:"Variedade", chave:"q8_variedade"},
+  {nome:"Disp. MDF", chave:"q8_disp_mdf"},
+  {nome:"Disp. ferragens", chave:"q8_disp_ferragens"},
+  {nome:"Qualidade do corte", chave:"q8_qual_corte"},
+  {nome:"Qualidade da fitagem", chave:"q8_qual_fitagem"},
+  {nome:"Prazo de entrega", chave:"q8_prazo_entrega"},
+  {nome:"Atendimento", chave:"q8_atendimento"},
+  {nome:"Cond. pagamento", chave:"q8_cond_pagamento"},
+  {nome:"Resolução de problemas", chave:"q8_resolucao_problemas"}
+];
+var OPC_Q4 = ["Preço dos produtos","Disponibilidade de estoque","Qualidade dos materiais","Rapidez na entrega","Qualidade do corte e da fitagem","Condições de pagamento","Atendimento e relacionamento","Facilidade para resolver problemas","Variedade de produtos","Confiança no fornecedor"];
+var OPC_Q6 = ["Preço mais baixo","Produto que não encontro na Fercomp","Melhor prazo de pagamento","Entrega mais rápida","Melhor qualidade de corte ou fitagem","Melhor atendimento","Promoções","Não costumo comprar de outros fornecedores","Outro motivo"];
+var OPC_Q6_EXCLUIR = "Não costumo comprar de outros fornecedores";
+var OPC_Q7 = ["Preço","Atendimento","Estoque e variedade","Corte e fitagem","Entrega","Condições de pagamento","Facilidade para comprar","Relacionamento e confiança","Não vejo diferença significativa","Outro"];
+var OPC_Q10 = ["Falta de material no fornecedor","Atraso na entrega","Demora no corte ou fitagem","Erros no pedido","Falta de crédito ou condições de pagamento","Dificuldade para encontrar determinados produtos","Problemas com clientes ou mudanças no projeto","Outro"];
+var OPC_Q12 = ["Entrega mais rápida","Entrega programada conforme a necessidade do projeto","Atendimento prioritário","Orçamento mais rápido","Mais opções de pagamento","Programa de benefícios para clientes frequentes","Descontos por volume de compra","Maior variedade de MDF e ferragens","Serviço de corte e fitagem mais rápido","Separação antecipada dos pedidos","Outro"];
+var OPC_Q13 = ["Muito útil","Útil","Pouco útil","Não utilizaria"];
+var OPC_Q14 = ["Sim, com descontos","Sim, com benefícios exclusivos","Sim, com vantagens em serviços e entregas","Sim, com condições comerciais especiais","Não tenho interesse"];
+var OPC_Q1 = ["Menos de 1 ano","De 1 a 3 anos","De 3 a 5 anos","Mais de 5 anos"];
+var OPC_Q2 = ["Trabalho sozinho","Trabalho com 1 ou 2 funcionários","Trabalho com 3 a 5 funcionários","Trabalho com mais de 5 funcionários"];
+var OPC_Q3 = ["Móveis planejados residenciais","Móveis comerciais","Cozinhas e dormitórios","Móveis sob medida em geral","Outros"];
+var OPC_Q5 = ["Fercomp","Outro fornecedor","Divido minhas compras entre vários fornecedores"];
+
+/* Mapeamento da matriz de prioridade: critério da Q4 -> aspecto(s) da Q8 */
+var MAPA_MATRIZ = [
+  {criterio:"Preço dos produtos", chaves:["q8_precos"], rotulo:"Preços"},
+  {criterio:"Disponibilidade de estoque", chaves:["q8_disp_mdf","q8_disp_ferragens"], rotulo:"Disponibilidade"},
+  {criterio:"Rapidez na entrega", chaves:["q8_prazo_entrega"], rotulo:"Prazo de entrega"},
+  {criterio:"Qualidade do corte e da fitagem", chaves:["q8_qual_corte","q8_qual_fitagem"], rotulo:"Corte e fitagem"},
+  {criterio:"Condições de pagamento", chaves:["q8_cond_pagamento"], rotulo:"Cond. pagamento"},
+  {criterio:"Atendimento e relacionamento", chaves:["q8_atendimento"], rotulo:"Atendimento"},
+  {criterio:"Facilidade para resolver problemas", chaves:["q8_resolucao_problemas"], rotulo:"Resolução problemas"},
+  {criterio:"Variedade de produtos", chaves:["q8_variedade"], rotulo:"Variedade"}
+];
+
+var STOPWORDS = ["de","a","o","que","e","para","com","mais","muito","fercomp","da","do","em","um","uma","os","as","no","na","é","ao","por","se","na","nos","meu","minha","mas","ou","já","sem","pra","tem","ser","eu","você","voce","não","nao","sim","the"];
+
+/* ---- Estado ---- */
+var DADOS = [];           // todas as respostas
+var MODO_DEMO = false;
+var charts = {};          // guarda os gráficos para destruir ao redesenhar
+var abaAbertaAtiva = "q9_maior_dificuldade";
+var palavraFiltro = null;
+var npsFiltroQ17 = "todos";
+
+var CHAVE_SENHA_LS = "fercomp_painel_senha";
+
+/* ===================== LOGIN ===================== */
+function ehDemo(){ try{ return new URLSearchParams(location.search).get("demo")==="1"; }catch(e){ return false; } }
+
+window.addEventListener("DOMContentLoaded", function(){
+  if(ehDemo()){ iniciarDemo(); return; }
+  // Senha salva?
+  var salva = "";
+  try{ salva = localStorage.getItem(CHAVE_SENHA_LS) || ""; }catch(e){}
+  if(salva){ document.getElementById("senhaInput").value = salva; entrar(true); }
+  document.getElementById("btEntrar").onclick = function(){ entrar(false); };
+  document.getElementById("senhaInput").addEventListener("keydown", function(e){ if(e.key==="Enter") entrar(false); });
+});
+
+function entrar(silencioso){
+  var senha = document.getElementById("senhaInput").value.trim();
+  if(!senha){ return; }
+  var url = (window.CONFIG_FERCOMP && window.CONFIG_FERCOMP.APPS_SCRIPT_URL) || "";
+  var erroEl = document.getElementById("loginErro");
+  erroEl.textContent = "Carregando...";
+  if(!url || url.indexOf("COLE_AQUI")>=0){
+    erroEl.textContent = "Configure o link do servidor no config.js (ou abra painel.html?demo=1).";
+    return;
+  }
+  fetch(url + (url.indexOf("?")>=0?"&":"?") + "chave=" + encodeURIComponent(senha))
+    .then(function(r){ return r.json(); })
+    .then(function(j){
+      if(j.erro){ erroEl.textContent = "Senha incorreta."; try{localStorage.removeItem(CHAVE_SENHA_LS);}catch(e){} return; }
+      try{ localStorage.setItem(CHAVE_SENHA_LS, senha); }catch(e){}
+      DADOS = (j.respostas||[]).map(normalizar);
+      abrirPainel();
+    })
+    .catch(function(){ erroEl.textContent = "Erro de conexão. Verifique a internet e a URL."; });
+}
+
+function iniciarDemo(){
+  MODO_DEMO = true;
+  DADOS = gerarDemo(60).map(normalizar);
+  document.getElementById("login").style.display="none";
+  document.getElementById("faixaDemo").style.display="block";
+  abrirPainel();
+}
+
+function abrirPainel(){
+  document.getElementById("login").style.display="none";
+  document.getElementById("painel").style.display="block";
+  var planilha = (window.CONFIG_FERCOMP && window.CONFIG_FERCOMP.PLANILHA_URL) || "#";
+  document.getElementById("btPlanilha").href = planilha;
+  marcarAtualizacao();
+  construirFiltros();
+  document.getElementById("btAtualizar").onclick = recarregar;
+  document.getElementById("btLimpar").onclick = limparFiltros;
+  document.getElementById("btCsv").onclick = baixarCsv;
+  document.getElementById("btImprimir").onclick = function(){ window.print(); };
+  document.getElementById("btSair").onclick = function(){ try{localStorage.removeItem(CHAVE_SENHA_LS);}catch(e){} location.reload(); };
+  renderTudo();
+}
+function recarregar(){
+  if(MODO_DEMO){ marcarAtualizacao(); return; }
+  var senha=""; try{ senha=localStorage.getItem(CHAVE_SENHA_LS)||""; }catch(e){}
+  var url=(window.CONFIG_FERCOMP && window.CONFIG_FERCOMP.APPS_SCRIPT_URL)||"";
+  document.getElementById("btAtualizar").textContent="Atualizando...";
+  fetch(url+(url.indexOf("?")>=0?"&":"?")+"chave="+encodeURIComponent(senha))
+    .then(function(r){return r.json();})
+    .then(function(j){ if(j.respostas){ DADOS=j.respostas.map(normalizar); marcarAtualizacao(); construirFiltros(); renderTudo(); } })
+    .catch(function(){ alert("Erro ao atualizar."); })
+    .then(function(){ document.getElementById("btAtualizar").textContent="Atualizar dados"; });
+}
+function marcarAtualizacao(){
+  var d=new Date();
+  function z(n){return (n<10?"0":"")+n;}
+  document.getElementById("ultimaAtual").textContent = "Última atualização às "+z(d.getHours())+":"+z(d.getMinutes());
+}
+
+/* ===================== NORMALIZAR UMA RESPOSTA ===================== */
+function normalizar(r){
+  var o = {};
+  for(var k in r) o[k]=r[k];
+  // Multi -> array
+  o._q4 = splitMulti(r.q4_criterios_decisao);
+  o._q6 = splitMulti(r.q6_motivo_outro_fornecedor);
+  o._q7 = splitMulti(r.q7_fercomp_melhor_em);
+  o._q10 = splitMulti(r.q10_atrasa_projetos);
+  o._q12 = splitMulti(r.q12_servicos_comprar_mais);
+  // Data
+  o._data = parseData(r.data_hora);
+  // NPS numérico
+  o._nps = (r.q16_nps===""||r.q16_nps==null) ? null : Number(r.q16_nps);
+  o._cat = r.q16_categoria || catNps(o._nps);
+  return o;
+}
+function splitMulti(s){ if(!s) return []; return String(s).split(";").map(function(x){return x.trim();}).filter(Boolean); }
+function parseData(s){ if(!s) return null; var d=new Date(String(s).replace(" ","T")); return isNaN(d)?null:d; }
+function catNps(n){ if(n==null||isNaN(n)) return ""; if(n>=9)return"Promotor"; if(n>=7)return"Neutro"; return"Detrator"; }
+function num(v){ var n=Number(v); return isNaN(n)?null:n; }
+
+/* ===================== FILTROS ===================== */
+var filtroAtual = {};
+function construirFiltros(){
+  var vendedores = unicos(DADOS.map(function(r){return r.vendedor;}));
+  var origens = unicos(DADOS.map(function(r){return r.origem;}));
+  var g = document.getElementById("filtrosGrid");
+  g.innerHTML =
+    campoData("dataIni","Período — de") +
+    campoData("dataFim","até") +
+    campoSelect("q1","Tempo de marcenaria", OPC_Q1) +
+    campoSelect("q2","Tamanho do negócio", OPC_Q2) +
+    campoSelect("q3","Tipo de trabalho", OPC_Q3) +
+    campoSelect("q5","Onde compra a maior parte", OPC_Q5) +
+    campoSelect("nps","Categoria NPS", ["Promotor","Neutro","Detrator"]) +
+    campoSelect("origem","Origem do link", origens) +
+    campoSelect("vendedor","Vendedor", vendedores) +
+    '<div class="campo"><label>Busca nas respostas abertas</label><input id="f_busca" type="text" placeholder="palavra..."></div>';
+  g.querySelectorAll("select,input").forEach(function(el){
+    el.addEventListener("change", lerFiltros);
+    el.addEventListener("input", lerFiltros);
+  });
+}
+function campoSelect(id,rot,ops){
+  var h='<div class="campo"><label>'+rot+'</label><select id="f_'+id+'"><option value="">Todos</option>';
+  ops.forEach(function(o){ if(o) h+='<option value="'+escA(o)+'">'+escA(o)+'</option>'; });
+  return h+'</select></div>';
+}
+function campoData(id,rot){ return '<div class="campo"><label>'+rot+'</label><input id="f_'+id+'" type="date"></div>'; }
+function unicos(arr){ var s={}; arr.forEach(function(x){ if(x) s[x]=1; }); return Object.keys(s).sort(); }
+function val(id){ var el=document.getElementById(id); return el?el.value.trim():""; }
+
+function lerFiltros(){
+  filtroAtual = {
+    dataIni: val("f_dataIni"), dataFim: val("f_dataFim"),
+    q1:val("f_q1"), q2:val("f_q2"), q3:val("f_q3"), q5:val("f_q5"),
+    nps:val("f_nps"), origem:val("f_origem"), vendedor:val("f_vendedor"),
+    busca:val("f_busca").toLowerCase()
+  };
+  renderTudo();
+}
+function limparFiltros(){
+  document.querySelectorAll("#filtrosGrid select,#filtrosGrid input").forEach(function(el){ el.value=""; });
+  filtroAtual = {};
+  renderTudo();
+}
+var CAMPOS_ABERTOS = ["q9_maior_dificuldade","q11_melhorar_imediatamente","q15_concentrar_compras","q17_motivo_nota","q18_unica_mudanca"];
+function filtrar(){
+  return DADOS.filter(function(r){
+    var f=filtroAtual;
+    if(f.q1 && r.q1_tempo_marcenaria!==f.q1) return false;
+    if(f.q2 && r.q2_tamanho_negocio!==f.q2) return false;
+    if(f.q3 && r.q3_tipo_trabalho!==f.q3) return false;
+    if(f.q5 && r.q5_onde_compra!==f.q5) return false;
+    if(f.nps && r._cat!==f.nps) return false;
+    if(f.origem && r.origem!==f.origem) return false;
+    if(f.vendedor && r.vendedor!==f.vendedor) return false;
+    if(f.dataIni && r._data && r._data < new Date(f.dataIni+"T00:00:00")) return false;
+    if(f.dataFim && r._data && r._data > new Date(f.dataFim+"T23:59:59")) return false;
+    if(f.busca){
+      var texto = CAMPOS_ABERTOS.map(function(c){return r[c]||"";}).join(" ").toLowerCase();
+      if(texto.indexOf(f.busca)<0) return false;
+    }
+    return true;
+  });
+}
+
+/* ===================== RENDER PRINCIPAL ===================== */
+function destruirCharts(){ for(var k in charts){ try{charts[k].destroy();}catch(e){} } charts={}; }
+function renderTudo(){
+  var d = filtrar();
+  // Contagem + aviso amostra
+  document.getElementById("contagem").textContent = d.length+" respostas no filtro atual de "+DADOS.length+" no total";
+  document.getElementById("avisoAmostra").style.display = (d.length>0 && d.length<5) ? "block" : "none";
+
+  destruirCharts();
+  var c = document.getElementById("conteudo");
+  if(DADOS.length===0){ c.innerHTML='<div class="card"><div class="vazio">Nenhuma resposta ainda. Assim que os clientes responderem, os dados aparecem aqui.</div></div>'; return; }
+
+  c.innerHTML =
+    blocoKpis(d) +
+    blocoQ6(d) +           // destaque: motivos de comprar em outro
+    bloco("grafQ4","2. O que pesa na decisão de compra (Q4)","Critérios mais citados, do maior para o menor.","<div class='chart-box'><canvas id='cQ4'></canvas></div>") +
+    bloco("grafQ7","3. Onde a Fercomp é melhor (Q7)","Aspectos em que o cliente vê a Fercomp na frente.","<div class='chart-box'><canvas id='cQ7'></canvas></div>") +
+    blocoQ8(d) +
+    blocoMatriz(d) +
+    bloco("grafQ10","6. O que atrasa os projetos (Q10)","","<div class='chart-box'><canvas id='cQ10'></canvas></div>") +
+    bloco("grafQ12","7. Serviços que fariam comprar mais (Q12)","","<div class='chart-box'><canvas id='cQ12'></canvas></div>") +
+    blocoQ13Q14() +
+    bloco("grafNps","9. Distribuição do NPS (Q16)","Quantidade de respostas por nota, colorida por categoria.","<div class='chart-box'><canvas id='cNps'></canvas></div>") +
+    blocoSegmento(d) +
+    blocoAbertas(d) +
+    blocoOutros(d);
+
+  // Desenhar gráficos (depois do HTML existir)
+  desenharQ6(d); desenharBarras("cQ4", contarMulti(d,"_q4",OPC_Q4), "laranja");
+  desenharBarras("cQ7", contarMulti(d,"_q7",OPC_Q7), "azul");
+  desenharQ8(d); desenharMatriz(d);
+  desenharBarras("cQ10", contarMulti(d,"_q10",OPC_Q10), "laranja");
+  desenharBarras("cQ12", contarMulti(d,"_q12",OPC_Q12), "azul");
+  desenharSimples("cQ13", contarUnica(d,"q13_entrega_programada",OPC_Q13));
+  desenharSimples("cQ14", contarUnica(d,"q14_programa_beneficios",OPC_Q14));
+  desenharNps(d);
+  ligarAbertas(d);
+}
+
+/* ---- blocos auxiliares ---- */
+function bloco(id,titulo,desc,corpo){
+  return '<div class="card" id="'+id+'"><h2>'+titulo+'</h2>'+(desc?'<div class="desc">'+desc+'</div>':'')+corpo+'</div>';
+}
+
+/* ===================== KPIs ===================== */
+function blocoKpis(d){
+  var total=d.length;
+  var nps = calcNps(d);
+  var mediaG = mediaGeralQ8(d);
+  var pctFercomp = total? Math.round(100*d.filter(function(r){return r.q5_onde_compra==="Fercomp";}).length/total):0;
+  var tempos = d.map(function(r){return num(r.tempo_resposta_seg);}).filter(function(x){return x!=null;});
+  var tempoMed = tempos.length? Math.round(tempos.reduce(function(a,b){return a+b;},0)/tempos.length):0;
+
+  return '<div class="kpis">'+
+    kpi("Total de respostas", total, "") +
+    kpiNps(nps, d) +
+    kpi("Nota média geral (Q8)", mediaG!=null?mediaG.toFixed(2):"—", "média dos 10 aspectos, de 1 a 5") +
+    kpi("Compram a maior parte na Fercomp", pctFercomp+"%", "resposta da Q5") +
+    kpi("Tempo médio de resposta", formatTempo(tempoMed), "do início ao envio") +
+  '</div>';
+}
+function kpi(rot,val,sub){ return '<div class="kpi"><div class="rotulo">'+rot+'</div><div class="valor">'+val+'</div>'+(sub?'<div class="sub">'+sub+'</div>':'')+'</div>'; }
+function kpiNps(nps, d){
+  var total=d.filter(function(r){return r._nps!=null;}).length;
+  var p=d.filter(function(r){return r._cat==="Promotor";}).length;
+  var n=d.filter(function(r){return r._cat==="Neutro";}).length;
+  var dt=d.filter(function(r){return r._cat==="Detrator";}).length;
+  function pc(x){return total?(100*x/total):0;}
+  var barra='<div class="barra-nps">'+
+    '<span style="width:'+pc(p)+'%;background:var(--verde)"></span>'+
+    '<span style="width:'+pc(n)+'%;background:var(--amarelo)"></span>'+
+    '<span style="width:'+pc(dt)+'%;background:var(--vermelho)"></span></div>';
+  return '<div class="kpi"><div class="rotulo">NPS</div><div class="valor">'+(total?nps:"—")+'</div>'+
+    '<div class="sub">'+p+' promotores · '+n+' neutros · '+dt+' detratores</div>'+barra+'</div>';
+}
+function calcNps(d){
+  var v=d.filter(function(r){return r._nps!=null;});
+  if(!v.length) return 0;
+  var p=v.filter(function(r){return r._cat==="Promotor";}).length;
+  var dt=v.filter(function(r){return r._cat==="Detrator";}).length;
+  return Math.round(100*(p-dt)/v.length);
+}
+function mediaGeralQ8(d){
+  var vals=[];
+  d.forEach(function(r){ ASPECTOS_Q8.forEach(function(a){ var x=num(r[a.chave]); if(x!=null) vals.push(x); }); });
+  return vals.length? vals.reduce(function(a,b){return a+b;},0)/vals.length : null;
+}
+function formatTempo(s){ if(!s) return "—"; var m=Math.floor(s/60), r=s%60; return m? (m+"m "+r+"s") : (r+"s"); }
+
+/* ===================== Q6 (destaque) ===================== */
+function blocoQ6(d){
+  return '<div class="card destaque" id="grafQ6"><h2>1. Por que compram de outro fornecedor (Q6)</h2>'+
+         '<div class="desc">Principal análise de <b>motivos da não compra</b>. "Não costumo comprar de outros" aparece à parte.</div>'+
+         '<div id="q6NaoCostuma" class="aviso-amostra" style="background:#e4ecf2;color:#2F373E;display:none"></div>'+
+         '<div class="chart-box"><canvas id="cQ6"></canvas></div></div>';
+}
+function desenharQ6(d){
+  var cont = contarMulti(d, "_q6", OPC_Q6);
+  // separa "não costumo"
+  var naoCostuma = cont.filter(function(x){return x.rotulo===OPC_Q6_EXCLUIR;})[0];
+  var resto = cont.filter(function(x){return x.rotulo!==OPC_Q6_EXCLUIR && x.valor>0;});
+  resto.sort(function(a,b){return b.valor-a.valor;});
+  var total=d.length;
+  if(naoCostuma && total){
+    var pc=Math.round(100*naoCostuma.valor/total);
+    var el=document.getElementById("q6NaoCostuma");
+    el.style.display="block";
+    el.innerHTML="💡 "+naoCostuma.valor+" cliente(s) ("+pc+"%) responderam \"Não costumo comprar de outros fornecedores\".";
+  }
+  desenharBarras("cQ6", resto, "laranja", total);
+}
+
+/* ===================== Q8 (notas por aspecto) ===================== */
+function blocoQ8(d){
+  return '<div class="card" id="grafQ8"><h2>4. Notas por aspecto (Q8)</h2>'+
+    '<div class="desc">Média de 1 a 5, da pior para a melhor. Laranja = abaixo de 3,5. Clique numa barra para ver a distribuição das notas.</div>'+
+    '<div class="chart-box"><canvas id="cQ8"></canvas></div>'+
+    '<div id="q8Distrib" style="margin-top:14px;display:none"><h3 style="font-size:14px" id="q8DistTit"></h3><div class="chart-box" style="max-width:420px"><canvas id="cQ8dist"></canvas></div></div>'+
+  '</div>';
+}
+function mediasQ8(d){
+  return ASPECTOS_Q8.map(function(a){
+    var vals=d.map(function(r){return num(r[a.chave]);}).filter(function(x){return x!=null;});
+    var m=vals.length? vals.reduce(function(x,y){return x+y;},0)/vals.length : 0;
+    return {rotulo:a.nome, chave:a.chave, valor:m, n:vals.length};
+  });
+}
+function desenharQ8(d){
+  var m=mediasQ8(d).slice().sort(function(a,b){return a.valor-b.valor;});
+  var cores=m.map(function(x){return x.valor<3.5?"#FB8324":"#8FAAC1";});
+  var ctx=document.getElementById("cQ8");
+  var h=Math.max(260, m.length*34);
+  ctx.parentNode.style.height=h+"px";
+  charts.q8=new Chart(ctx,{type:"bar",data:{labels:m.map(function(x){return x.rotulo;}),
+    datasets:[{data:m.map(function(x){return +x.valor.toFixed(2);}),backgroundColor:cores,borderRadius:6}]},
+    options:{indexAxis:"y",responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return "Média "+c.parsed.x.toFixed(2)+" ("+m[c.dataIndex].n+" respostas)";}}}},
+      scales:{x:{min:0,max:5,ticks:{stepSize:1}}},
+      onClick:function(e,els){ if(els.length){ mostrarDistrib(d, m[els[0].index]); } }
+    }});
+}
+function mostrarDistrib(d, aspecto){
+  var cont=[0,0,0,0,0];
+  d.forEach(function(r){ var v=num(r[aspecto.chave]); if(v>=1&&v<=5) cont[v-1]++; });
+  document.getElementById("q8Distrib").style.display="block";
+  document.getElementById("q8DistTit").textContent="Distribuição das notas — "+aspecto.rotulo;
+  if(charts.q8dist){try{charts.q8dist.destroy();}catch(e){}}
+  charts.q8dist=new Chart(document.getElementById("cQ8dist"),{type:"bar",
+    data:{labels:["1","2","3","4","5"],datasets:[{data:cont,backgroundColor:["#D9644E","#E79A6B","#E7B84B","#9FC6B0","#4CAF72"],borderRadius:6}]},
+    options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{precision:0}}}}});
+}
+
+/* ===================== Matriz de prioridade ===================== */
+function blocoMatriz(d){
+  return '<div class="card" id="grafMatriz"><h2>5. Matriz "Corrigir primeiro"</h2>'+
+    '<div class="desc">Cada ponto é um critério: eixo horizontal = % que o considera importante (Q4); eixo vertical = nota média da Fercomp nesse aspecto (Q8). O quadrante vermelho (muito importante + nota baixa) é onde <b>corrigir primeiro</b>.</div>'+
+    '<div class="chart-box" style="height:380px"><canvas id="cMatriz"></canvas></div>'+
+    '<div id="matrizLista" style="margin-top:10px"></div>'+
+  '</div>';
+}
+function desenharMatriz(d){
+  var total=d.length||1;
+  var mapaNotas={}; mediasQ8(d).forEach(function(x){ mapaNotas[x.chave]=x.valor; });
+  var contQ4=contarMulti(d,"_q4",OPC_Q4);
+  var impPct={}; contQ4.forEach(function(x){ impPct[x.rotulo]=100*x.valor/total; });
+
+  var pontos=MAPA_MATRIZ.map(function(m){
+    var nota = media(m.chaves.map(function(c){return mapaNotas[c];}).filter(function(x){return x!=null;}));
+    return {x: impPct[m.criterio]||0, y: nota||0, label:m.rotulo};
+  });
+  // limiares: importância média e nota 3.5
+  var impMedia = media(pontos.map(function(p){return p.x;})) || 0;
+
+  var ctx=document.getElementById("cMatriz");
+  charts.matriz=new Chart(ctx,{type:"scatter",
+    data:{datasets:[{data:pontos,pointRadius:7,pointHoverRadius:9,
+      backgroundColor:pontos.map(function(p){ return (p.x>=impMedia && p.y<3.5)?"#D9644E":"#8FAAC1"; }),
+      borderColor:"#2F373E",borderWidth:1}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){var p=c.raw;return p.label+": "+Math.round(p.x)+"% importante · nota "+p.y.toFixed(2);}}}},
+      scales:{
+        x:{title:{display:true,text:"% que considera importante"},min:0,suggestedMax:Math.max(60,Math.ceil((Math.max.apply(null,pontos.map(function(p){return p.x;}))+10)/10)*10)},
+        y:{title:{display:true,text:"Nota média (1 a 5)"},min:1,max:5}
+      }
+    }});
+  // Lista do quadrante "corrigir primeiro"
+  var criticos=pontos.filter(function(p){return p.x>=impMedia && p.y<3.5;}).sort(function(a,b){return a.y-b.y;});
+  var el=document.getElementById("matrizLista");
+  if(criticos.length){
+    el.innerHTML='<div class="aviso-amostra" style="background:#f7ddd6;color:#8a2b1c">🔧 Corrigir primeiro: '+criticos.map(function(p){return p.label+" (nota "+p.y.toFixed(1)+")";}).join(", ")+'</div>';
+  } else {
+    el.innerHTML='<div class="aviso-amostra" style="background:#d2eccf;color:#2b5a2f">✓ Nenhum aspecto muito importante está com nota baixa neste filtro.</div>';
+  }
+}
+
+/* ===================== Q13 / Q14 ===================== */
+function blocoQ13Q14(){
+  return '<div class="card"><h2>8. Entrega programada (Q13) e Programa de benefícios (Q14)</h2>'+
+    '<div class="grid-2">'+
+      '<div><div class="desc">Q13 — Interesse em entrega programada</div><div class="chart-box"><canvas id="cQ13"></canvas></div></div>'+
+      '<div><div class="desc">Q14 — Interesse em programa de benefícios</div><div class="chart-box"><canvas id="cQ14"></canvas></div></div>'+
+    '</div></div>';
+}
+
+/* ===================== Comparativo por segmento ===================== */
+function blocoSegmento(d){
+  return '<div class="card" id="grafSeg"><h2>10. Comparativo por segmento</h2>'+
+    '<div class="desc">NPS, nota média (Q8) e principal motivo de não compra (Q6) por segmento. Escolha como separar:</div>'+
+    '<div class="campo" style="max-width:260px;margin-bottom:12px"><select id="segSeletor">'+
+      '<option value="q2_tamanho_negocio">Tamanho do negócio (Q2)</option>'+
+      '<option value="q1_tempo_marcenaria">Tempo de marcenaria (Q1)</option>'+
+      '<option value="q3_tipo_trabalho">Tipo de trabalho (Q3)</option>'+
+      '<option value="q5_onde_compra">Onde compra (Q5)</option>'+
+      '<option value="vendedor">Vendedor</option>'+
+      '<option value="origem">Origem</option>'+
+    '</select></div>'+
+    '<div id="segTabela"></div></div>';
+}
+function tabelaSegmento(d, campo){
+  var grupos={};
+  d.forEach(function(r){ var k=r[campo]||"(sem informação)"; (grupos[k]=grupos[k]||[]).push(r); });
+  var linhas=Object.keys(grupos).map(function(k){
+    var g=grupos[k];
+    var motivo = topMotivoQ6(g);
+    return {seg:k, n:g.length, nps:calcNps(g), nota:mediaGeralQ8(g), motivo:motivo};
+  }).sort(function(a,b){return b.n-a.n;});
+  var h='<table><thead><tr><th>Segmento</th><th>Respostas</th><th>NPS</th><th>Nota média</th><th>Principal motivo (Q6)</th></tr></thead><tbody>';
+  linhas.forEach(function(l){
+    h+='<tr><td><b>'+escA(l.seg)+'</b></td><td>'+l.n+'</td><td>'+l.nps+'</td><td>'+(l.nota!=null?l.nota.toFixed(2):"—")+'</td><td>'+escA(l.motivo||"—")+'</td></tr>';
+  });
+  return h+'</tbody></table>';
+}
+function topMotivoQ6(g){
+  var cont=contarMulti(g,"_q6",OPC_Q6).filter(function(x){return x.rotulo!==OPC_Q6_EXCLUIR && x.valor>0;});
+  cont.sort(function(a,b){return b.valor-a.valor;});
+  return cont.length? cont[0].rotulo : null;
+}
+
+/* ===================== Respostas abertas ===================== */
+function blocoAbertas(d){
+  var nomes={q9_maior_dificuldade:"Q9 Dificuldade",q11_melhorar_imediatamente:"Q11 Melhorar já",q15_concentrar_compras:"Q15 Concentrar compras",q17_motivo_nota:"Q17 Motivo da nota",q18_unica_mudanca:"Q18 Única mudança"};
+  var abas=CAMPOS_ABERTOS.map(function(c){ return '<button class="aba'+(c===abaAbertaAtiva?' ativa':'')+'" data-c="'+c+'">'+nomes[c]+'</button>'; }).join("");
+  return '<div class="card" id="grafAbertas"><h2>11. Respostas abertas</h2>'+
+    '<div class="abas">'+abas+'</div>'+
+    '<div id="abertasFiltroNps"></div>'+
+    '<div id="abertasNuvem" class="nuvem"></div>'+
+    '<div id="abertasLista"></div></div>';
+}
+function ligarAbertas(d){
+  document.querySelectorAll("#grafAbertas .aba").forEach(function(b){
+    b.onclick=function(){ abaAbertaAtiva=b.getAttribute("data-c"); palavraFiltro=null; npsFiltroQ17="todos"; renderAbertas(d); };
+  });
+  renderAbertas(d);
+}
+function renderAbertas(d){
+  document.querySelectorAll("#grafAbertas .aba").forEach(function(b){ b.classList.toggle("ativa", b.getAttribute("data-c")===abaAbertaAtiva); });
+  var campo=abaAbertaAtiva;
+  var lista=d.filter(function(r){return (r[campo]||"").trim();});
+
+  // Filtro NPS só na Q17
+  var fnps=document.getElementById("abertasFiltroNps");
+  if(campo==="q17_motivo_nota"){
+    fnps.className="filtro-nps";
+    fnps.innerHTML=["todos","Promotor","Neutro","Detrator"].map(function(x){
+      return '<button class="'+(npsFiltroQ17===x?'ativa':'')+'" data-x="'+x+'">'+(x==="todos"?"Todos":x)+'</button>';
+    }).join("");
+    fnps.querySelectorAll("button").forEach(function(b){ b.onclick=function(){ npsFiltroQ17=b.getAttribute("data-x"); renderAbertas(d); }; });
+    if(npsFiltroQ17!=="todos") lista=lista.filter(function(r){return r._cat===npsFiltroQ17;});
+  } else { fnps.className=""; fnps.innerHTML=""; }
+
+  // Nuvem de palavras
+  var freq={};
+  lista.forEach(function(r){ palavras(r[campo]).forEach(function(p){ freq[p]=(freq[p]||0)+1; }); });
+  var top=Object.keys(freq).map(function(p){return {p:p,n:freq[p]};}).sort(function(a,b){return b.n-a.n;}).slice(0,18);
+  document.getElementById("abertasNuvem").innerHTML = top.length? top.map(function(x){
+    return '<button class="palavra'+(palavraFiltro===x.p?' ativa':'')+'" data-p="'+escA(x.p)+'">'+escA(x.p)+' ('+x.n+')</button>';
+  }).join("") : '<span class="desc">Sem palavras suficientes ainda.</span>';
+  document.querySelectorAll("#abertasNuvem .palavra").forEach(function(b){
+    b.onclick=function(){ var p=b.getAttribute("data-p"); palavraFiltro = (palavraFiltro===p?null:p); renderAbertas(d); };
+  });
+
+  if(palavraFiltro) lista=lista.filter(function(r){ return (r[campo]||"").toLowerCase().indexOf(palavraFiltro)>=0; });
+
+  var html = lista.length? lista.map(function(r){
+    var data=r._data? (r._data.toLocaleDateString("pt-BR")) : "";
+    return '<div class="resposta-aberta"><div class="meta">'+data+' · '+escA(r.q2_tamanho_negocio||"")+' · NPS '+(r._nps!=null?r._nps:"—")+'</div>'+escA(r[campo])+'</div>';
+  }).join("") : '<div class="vazio">Nenhuma resposta aberta neste filtro.</div>';
+  document.getElementById("abertasLista").innerHTML=html;
+}
+function palavras(txt){
+  return String(txt||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"")
+    .replace(/[^a-z0-9\s]/g," ").split(/\s+/)
+    .filter(function(w){ return w.length>=3 && STOPWORDS.indexOf(w)<0; });
+}
+
+/* ===================== Campos "Outro" ===================== */
+function blocoOutros(d){
+  var campos=[
+    {c:"q3_outro",t:"Q3 — Outro tipo de trabalho"},
+    {c:"q6_outro",t:"Q6 — Outro motivo"},
+    {c:"q7_outro",t:"Q7 — Outro (onde a Fercomp é melhor)"},
+    {c:"q10_outro",t:"Q10 — Outro (o que atrasa)"},
+    {c:"q12_outro",t:"Q12 — Outro serviço"}
+  ];
+  var h='<div class="card legenda-outro"><h2>12. Campos "Outro"</h2>';
+  var algum=false;
+  campos.forEach(function(x){
+    var vals=d.map(function(r){return (r[x.c]||"").trim();}).filter(Boolean);
+    if(vals.length){ algum=true; h+='<h3>'+x.t+'</h3><ul class="lista-outro">'+vals.map(function(v){return '<li>'+escA(v)+'</li>';}).join("")+'</ul>'; }
+  });
+  if(!algum) h+='<div class="vazio">Ninguém preencheu campos "Outro" neste filtro.</div>';
+  return h+'</div>';
+}
+
+/* ===================== Contagens e gráficos genéricos ===================== */
+function contarUnica(d, chave, ordem){
+  var cont={}; ordem.forEach(function(o){cont[o]=0;});
+  d.forEach(function(r){ var v=r[chave]; if(v){ cont[v]=(cont[v]||0)+1; } });
+  return ordem.map(function(o){return {rotulo:o, valor:cont[o]||0};});
+}
+function contarMulti(d, chaveArr, ordem){
+  var cont={}; ordem.forEach(function(o){cont[o]=0;});
+  d.forEach(function(r){ (r[chaveArr]||[]).forEach(function(v){ cont[v]=(cont[v]||0)+1; }); });
+  return ordem.map(function(o){return {rotulo:o, valor:cont[o]||0};});
+}
+function desenharBarras(canvasId, dados, cor, totalPct){
+  var arr=dados.slice().filter(function(x){return x.valor>0;}).sort(function(a,b){return b.valor-a.valor;});
+  var ctx=document.getElementById(canvasId); if(!ctx) return;
+  var total = totalPct || arr.reduce(function(a,b){return a+b.valor;},0) || 1;
+  var h=Math.max(220, arr.length*34+40);
+  ctx.parentNode.style.height=h+"px";
+  var cBase = cor==="laranja"?"#FB8324":"#8FAAC1";
+  charts[canvasId]=new Chart(ctx,{type:"bar",
+    data:{labels:arr.map(function(x){return x.rotulo;}),datasets:[{data:arr.map(function(x){return x.valor;}),backgroundColor:cBase,borderRadius:6}]},
+    options:{indexAxis:"y",responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){var pc=Math.round(100*c.parsed.x/total);return c.parsed.x+" ("+pc+"%)";}}},
+        datalabels:false},
+      scales:{x:{beginAtZero:true,ticks:{precision:0}}}}});
+}
+function desenharSimples(canvasId, dados){
+  var ctx=document.getElementById(canvasId); if(!ctx) return;
+  ctx.parentNode.style.height="240px";
+  charts[canvasId]=new Chart(ctx,{type:"bar",
+    data:{labels:dados.map(function(x){return x.rotulo;}),datasets:[{data:dados.map(function(x){return x.valor;}),backgroundColor:"#8FAAC1",borderRadius:6}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{precision:0}}}}});
+}
+function desenharNps(d){
+  var cont=new Array(11).fill(0);
+  d.forEach(function(r){ if(r._nps!=null && r._nps>=0 && r._nps<=10) cont[r._nps]++; });
+  var cores=cont.map(function(_,n){ return n<=6?"#D9644E":(n<=8?"#E7B84B":"#4CAF72"); });
+  var ctx=document.getElementById("cNps"); if(!ctx) return;
+  ctx.parentNode.style.height="260px";
+  charts.nps=new Chart(ctx,{type:"bar",
+    data:{labels:["0","1","2","3","4","5","6","7","8","9","10"],datasets:[{data:cont,backgroundColor:cores,borderRadius:6}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{precision:0}}}}});
+}
+
+/* ---- seletor do comparativo (precisa ser religado após cada render) ---- */
+document.addEventListener("change", function(e){
+  if(e.target && e.target.id==="segSeletor"){
+    document.getElementById("segTabela").innerHTML = tabelaSegmento(filtrar(), e.target.value);
+  }
+});
+/* desenha a tabela inicial de segmento após render */
+var _renderTudoOrig = renderTudo;
+renderTudo = function(){ _renderTudoOrig(); var sel=document.getElementById("segSeletor"); if(sel){ document.getElementById("segTabela").innerHTML=tabelaSegmento(filtrar(), sel.value); } };
+
+/* ===================== Utilidades ===================== */
+function media(arr){ arr=arr.filter(function(x){return x!=null && !isNaN(x);}); return arr.length? arr.reduce(function(a,b){return a+b;},0)/arr.length : null; }
+function escA(s){ return String(s==null?"":s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c];}); }
+
+/* ===================== CSV ===================== */
+var COLUNAS_CSV=["id","data_hora","origem","vendedor","dispositivo","tempo_resposta_seg",
+ "q1_tempo_marcenaria","q2_tamanho_negocio","q3_tipo_trabalho","q3_outro","q4_criterios_decisao",
+ "q5_onde_compra","q6_motivo_outro_fornecedor","q6_outro","q7_fercomp_melhor_em","q7_outro",
+ "q8_precos","q8_variedade","q8_disp_mdf","q8_disp_ferragens","q8_qual_corte","q8_qual_fitagem",
+ "q8_prazo_entrega","q8_atendimento","q8_cond_pagamento","q8_resolucao_problemas",
+ "q9_maior_dificuldade","q10_atrasa_projetos","q10_outro","q11_melhorar_imediatamente",
+ "q12_servicos_comprar_mais","q12_outro","q13_entrega_programada","q14_programa_beneficios",
+ "q15_concentrar_compras","q16_nps","q16_categoria","q17_motivo_nota","q18_unica_mudanca"];
+function baixarCsv(){
+  var d=filtrar();
+  var linhas=[COLUNAS_CSV.join(";")];
+  d.forEach(function(r){
+    linhas.push(COLUNAS_CSV.map(function(c){
+      var v=r[c]==null?"":String(r[c]);
+      v=v.replace(/"/g,'""');
+      if(/[;"\n]/.test(v)) v='"'+v+'"';
+      return v;
+    }).join(";"));
+  });
+  var bom="﻿"; // UTF-8 BOM para o Excel brasileiro
+  var blob=new Blob([bom+linhas.join("\r\n")],{type:"text/csv;charset=utf-8"});
+  var a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);
+  a.download="pesquisa-fercomp-"+new Date().toISOString().slice(0,10)+".csv";
+  a.click();
+}
+
+/* ===================== DADOS DE DEMONSTRAÇÃO (60 fictícios) ===================== */
+function gerarDemo(n){
+  function esc(a){return a[Math.floor(Math.random()*a.length)];}
+  function chance(p){return Math.random()<p;}
+  function nota(media){ var v=Math.round(media+(Math.random()*2-1)); return Math.max(1,Math.min(5,v)); }
+  var vendedores=["nathan","andreza","andrielly","hugo","lays","layane"];
+  var origens=["whatsapp","whatsapp","whatsapp","instagram","balcao"];
+  var dificuldades=["Falta de MDF na cor que preciso","Demora no corte quando a loja está cheia","Preço do MDF subiu muito","Nem sempre acho a ferragem certa","Prazo de entrega às vezes atrasa","Queria mais opções de pagamento","Atendimento rápido faz diferença pra mim"];
+  var melhorar=["Avisar quando o pedido estiver pronto","Entrega mais rápida","Mais variedade de cores","Corte mais preciso","Preço mais competitivo","App para acompanhar o pedido"];
+  var concentrar=["Melhores condições de pagamento","Programa de pontos","Entrega programada","Desconto por volume","Mais estoque de MDF"];
+  var motivos=["Atendimento sempre bom","Perto da minha oficina","Confio na qualidade","Preço podia melhorar mas vale","Já tive problema com entrega","Resolvem rápido quando dá problema"];
+  var mudancas=["Entrega no dia combinado","Preço mais baixo no MDF","Corte e fitagem mais rápidos","Mais prazo pra pagar","Ter sempre em estoque"];
+  var out=[];
+  for(var i=0;i<n;i++){
+    var perfilBom = chance(0.55);
+    var nps = perfilBom ? esc([9,10,9,8,10,7,9]) : esc([6,5,7,4,8,6,3]);
+    var cat = nps>=9?"Promotor":(nps>=7?"Neutro":"Detrator");
+    var onde = esc(["Fercomp","Fercomp","Fercomp","Outro fornecedor","Divido minhas compras entre vários fornecedores"]);
+    // Q4: 3 critérios
+    var q4=embaralhar(OPC_Q4).slice(0,3);
+    // Q7: 1 a 3
+    var q7; if(chance(0.1)){ q7=["Não vejo diferença significativa"]; } else { q7=embaralhar(OPC_Q7.filter(function(x){return x!=="Não vejo diferença significativa"&&x!=="Outro";})).slice(0,1+Math.floor(Math.random()*3)); }
+    var q12=embaralhar(OPC_Q12.filter(function(x){return x!=="Outro";})).slice(0,2+Math.floor(Math.random()*2));
+    var baseNota = perfilBom?4:2.8;
+    var d=new Date(); d.setDate(d.getDate()-Math.floor(Math.random()*60)); d.setHours(8+Math.floor(Math.random()*11),Math.floor(Math.random()*60),0);
+    function fdata(dt){function z(x){return(x<10?"0":"")+x;}return dt.getFullYear()+"-"+z(dt.getMonth()+1)+"-"+z(dt.getDate())+" "+z(dt.getHours())+":"+z(dt.getMinutes())+":00";}
+    var r={
+      id:"demo_"+i, data_hora:fdata(d), origem:esc(origens), vendedor:esc(vendedores),
+      dispositivo:chance(0.85)?"celular":"computador", tempo_resposta_seg:120+Math.floor(Math.random()*300),
+      q1_tempo_marcenaria:esc(OPC_Q1), q2_tamanho_negocio:esc(OPC_Q2),
+      q3_tipo_trabalho:esc(OPC_Q3), q3_outro:"",
+      q4_criterios_decisao:q4.join("; "),
+      q5_onde_compra:onde,
+      q6_motivo_outro_fornecedor: (onde==="Fercomp" && chance(0.4)) ? "Não costumo comprar de outros fornecedores" : embaralhar(OPC_Q6.filter(function(x){return x!=="Outro motivo" && x!=="Não costumo comprar de outros fornecedores";})).slice(0,1+Math.floor(Math.random()*2)).join("; "),
+      q6_outro:"",
+      q7_fercomp_melhor_em:q7.join("; "), q7_outro:"",
+      q8_precos:nota(baseNota-0.4), q8_variedade:nota(baseNota), q8_disp_mdf:nota(baseNota-0.2),
+      q8_disp_ferragens:nota(baseNota-0.3), q8_qual_corte:nota(baseNota+0.2), q8_qual_fitagem:nota(baseNota+0.1),
+      q8_prazo_entrega:nota(baseNota-0.5), q8_atendimento:nota(baseNota+0.4), q8_cond_pagamento:nota(baseNota-0.3),
+      q8_resolucao_problemas:nota(baseNota),
+      q9_maior_dificuldade: chance(0.7)?esc(dificuldades):"",
+      q10_atrasa_projetos:embaralhar(OPC_Q10.filter(function(x){return x!=="Outro";})).slice(0,1+Math.floor(Math.random()*2)).join("; "), q10_outro:"",
+      q11_melhorar_imediatamente: chance(0.6)?esc(melhorar):"",
+      q12_servicos_comprar_mais:q12.join("; "), q12_outro:"",
+      q13_entrega_programada:esc(OPC_Q13), q14_programa_beneficios:esc(OPC_Q14),
+      q15_concentrar_compras: chance(0.55)?esc(concentrar):"",
+      q16_nps:nps, q16_categoria:cat,
+      q17_motivo_nota: chance(0.7)?esc(motivos):"",
+      q18_unica_mudanca: chance(0.6)?esc(mudancas):""
+    };
+    out.push(r);
+  }
+  return out;
+}
+function embaralhar(a){ a=a.slice(); for(var i=a.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)); var t=a[i];a[i]=a[j];a[j]=t; } return a; }
+</script>
+</body>
+</html>

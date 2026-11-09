@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Pesquisa de Clientes Fercomp</title>
+<meta name="description" content="Pesquisa rápida de clientes da Fercomp — sua opinião ajuda a melhorar nosso atendimento.">
+
+<!-- Fonte Montserrat (pesos 500, 600, 700, 800) -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800&display=swap" rel="stylesheet">
+
+<!-- Configuração (URL do Apps Script, senha, links) -->
+<script src="config.js"></script>
+
+<style>
+/* ===================== IDENTIDADE VISUAL ===================== */
+:root{
+  --laranja:#FB8324;
+  --azul:#8FAAC1;
+  --fundo:#E6E9EC;
+  --escuro:#2F373E;
+  --branco:#FFFFFF;
+  --raio:12px;
+  --sombra:0 2px 10px rgba(47,55,62,.10);
+  --sombra-forte:0 6px 20px rgba(47,55,62,.16);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{margin:0;padding:0;}
+body{
+  font-family:'Montserrat',system-ui,Arial,sans-serif;
+  font-weight:500;
+  background:var(--fundo);
+  color:var(--escuro);
+  line-height:1.45;
+  -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3{font-weight:800;margin:0;}
+button{font-family:inherit;cursor:pointer;}
+
+/* ===================== ESTRUTURA DA TELA ===================== */
+/* Barra de progresso fixa no topo */
+#barraProgressoWrap{
+  position:fixed;top:0;left:0;right:0;z-index:40;
+  background:var(--branco);box-shadow:0 1px 4px rgba(47,55,62,.08);
+  padding:10px 16px calc(8px + env(safe-area-inset-top,0));
+  padding-top:calc(10px + env(safe-area-inset-top,0));
+}
+#barraRotulo{font-size:12px;font-weight:700;color:var(--escuro);display:flex;justify-content:space-between;margin-bottom:6px;}
+#barraTrilho{height:8px;background:var(--fundo);border-radius:99px;overflow:hidden;}
+#barraPreenche{height:100%;width:0;background:var(--laranja);border-radius:99px;transition:width .3s ease;}
+
+/* Cabeçalho/logo (telas de abertura e final) */
+.topo-logo{display:flex;justify-content:center;align-items:center;padding:24px 16px 4px;}
+.topo-logo img{max-height:52px;max-width:200px;}
+.topo-logo .texto-logo{font-weight:800;font-size:30px;color:var(--laranja);letter-spacing:1px;}
+
+/* Área principal com rolagem; espaço embaixo para a barra de botões */
+#app{
+  max-width:560px;margin:0 auto;padding:16px;
+  padding-top:70px;              /* espaço da barra de progresso */
+  padding-bottom:120px;          /* espaço da barra de botões */
+  min-height:100vh;
+}
+/* Nas telas sem barra de progresso (abertura, final, revisão topo) */
+body.sem-progresso #app{padding-top:16px;}
+
+/* Barra de botões fixa embaixo */
+#rodape{
+  position:fixed;left:0;right:0;bottom:0;z-index:30;
+  background:linear-gradient(to top, var(--fundo) 70%, rgba(230,233,236,0));
+  padding:12px 16px calc(14px + env(safe-area-inset-bottom,0));
+  display:flex;gap:10px;align-items:center;justify-content:space-between;
+  max-width:560px;margin:0 auto;
+}
+#rodape.escondido{display:none;}
+
+/* ===================== BOTÕES ===================== */
+.btn{
+  border:none;border-radius:var(--raio);font-weight:700;font-size:16px;
+  min-height:52px;padding:0 20px;transition:transform .05s, box-shadow .2s, background .2s;
+}
+.btn:active{transform:scale(.98);}
+.btn-laranja{background:var(--laranja);color:var(--branco);box-shadow:var(--sombra);flex:1;}
+.btn-laranja:disabled{opacity:.45;cursor:not-allowed;box-shadow:none;}
+.btn-voltar{background:transparent;color:var(--escuro);font-weight:600;font-size:14px;min-height:44px;padding:0 8px;opacity:.75;}
+.btn-pular{background:var(--branco);color:var(--escuro);border:1.5px solid #cfd6dc;min-height:46px;flex:0 0 auto;}
+
+/* ===================== CARDS DE OPÇÃO ===================== */
+.pergunta-secao{font-size:12px;font-weight:800;letter-spacing:.5px;color:var(--laranja);text-transform:uppercase;margin-bottom:6px;}
+.pergunta-texto{font-size:21px;font-weight:800;margin-bottom:4px;}
+.pergunta-ajuda{font-size:13px;font-weight:600;color:#6a747c;margin-bottom:16px;}
+.lista-opcoes{display:flex;flex-direction:column;gap:10px;margin-top:4px;}
+
+.card-opcao{
+  position:relative;display:flex;align-items:center;gap:12px;
+  background:var(--branco);border:2px solid transparent;border-radius:var(--raio);
+  padding:14px 16px;min-height:56px;box-shadow:var(--sombra);
+  font-size:16px;font-weight:600;color:var(--escuro);text-align:left;width:100%;
+  transition:border-color .15s, background .15s;
+}
+.card-opcao .marca{
+  flex:0 0 auto;width:24px;height:24px;border-radius:50%;
+  border:2px solid #c3ccd3;display:flex;align-items:center;justify-content:center;
+  font-size:15px;color:var(--branco);background:transparent;transition:all .15s;
+}
+.card-opcao.sel{border-color:var(--azul);background:var(--azul);color:var(--branco);}
+.card-opcao.sel .marca{background:var(--branco);border-color:var(--branco);color:var(--azul);}
+.card-opcao input{position:absolute;opacity:0;width:1px;height:1px;}
+
+/* Campo "Outro" / abertas */
+.campo-outro{margin-top:4px;}
+textarea.txt, input.txt{
+  width:100%;border:2px solid #cfd6dc;border-radius:var(--raio);
+  padding:14px;font-family:inherit;font-size:16px;font-weight:500;color:var(--escuro);
+  background:var(--branco);resize:vertical;
+}
+textarea.txt{min-height:120px;}
+.txt:focus{outline:none;border-color:var(--laranja);}
+.rotulo-campo{font-size:13px;font-weight:700;margin:14px 0 6px;}
+
+/* Contador de múltipla escolha */
+.contador{font-size:13px;font-weight:700;color:var(--azul);margin-bottom:10px;}
+.aviso-limite{color:var(--laranja);}
+
+/* ===================== PERGUNTA 8 (notas 1 a 5) ===================== */
+.nota-legenda{font-size:12px;font-weight:700;color:#6a747c;margin-bottom:14px;}
+.aspecto{background:var(--branco);border-radius:var(--raio);box-shadow:var(--sombra);padding:12px 14px;margin-bottom:10px;}
+.aspecto-nome{font-size:15px;font-weight:700;margin-bottom:10px;}
+.nota-botoes{display:flex;gap:8px;justify-content:space-between;}
+.nota-bt{
+  flex:1;aspect-ratio:1/1;max-width:56px;border-radius:50%;border:2px solid #cfd6dc;
+  background:var(--branco);color:var(--escuro);font-weight:800;font-size:17px;min-height:44px;
+}
+.nota-bt.sel{background:var(--laranja);border-color:var(--laranja);color:var(--branco);}
+
+/* ===================== PERGUNTA 16 (NPS 0 a 10) ===================== */
+.nps-grade{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin:6px 0 12px;}
+.nps-bt{
+  border:2px solid #cfd6dc;border-radius:10px;background:var(--branco);color:var(--escuro);
+  font-weight:800;font-size:18px;min-height:52px;
+}
+.nps-bt.sel{outline:3px solid var(--escuro);outline-offset:1px;}
+.nps-bt.vermelho{background:#f7d4cf;border-color:#edb4ab;}
+.nps-bt.amarelo{background:#fbeeca;border-color:#f2dc9a;}
+.nps-bt.verde{background:#d2eccf;border-color:#a9d9a4;}
+.nps-legendas{display:flex;justify-content:space-between;font-size:11px;font-weight:700;color:#6a747c;}
+
+/* ===================== TELAS DE ABERTURA / FINAL ===================== */
+.bloco-centro{text-align:center;padding:8px 4px;}
+.titulo-abertura{font-size:26px;font-weight:800;margin:10px 0;line-height:1.2;}
+.sub-abertura{font-size:16px;font-weight:700;color:var(--escuro);margin-bottom:16px;}
+.texto-abertura{background:var(--branco);border-radius:var(--raio);box-shadow:var(--sombra);padding:16px;text-align:left;font-size:14.5px;font-weight:500;margin-bottom:16px;}
+.selo{display:inline-block;background:var(--azul);color:var(--branco);font-weight:700;font-size:13px;border-radius:99px;padding:8px 16px;margin-bottom:18px;}
+.card-final{background:var(--branco);border-radius:var(--raio);box-shadow:var(--sombra-forte);padding:28px 20px;text-align:center;margin-top:30px;}
+.check-grande{width:72px;height:72px;border-radius:50%;background:var(--laranja);color:#fff;font-size:40px;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;}
+
+/* ===================== REVISÃO ===================== */
+.rev-item{background:var(--branco);border-radius:var(--raio);box-shadow:var(--sombra);padding:12px 14px;margin-bottom:10px;display:flex;justify-content:space-between;gap:10px;align-items:flex-start;}
+.rev-pergunta{font-size:12px;font-weight:700;color:#6a747c;margin-bottom:2px;}
+.rev-resposta{font-size:15px;font-weight:700;color:var(--escuro);}
+.rev-vazia{color:#9aa4ac;font-weight:600;font-style:italic;}
+.rev-editar{background:transparent;border:none;color:var(--laranja);font-weight:700;font-size:13px;flex:0 0 auto;}
+
+/* ===================== AVISOS / ERROS ===================== */
+.toast{
+  position:fixed;left:16px;right:16px;bottom:96px;z-index:60;max-width:528px;margin:0 auto;
+  background:var(--escuro);color:#fff;border-radius:var(--raio);padding:12px 16px;font-size:14px;font-weight:600;
+  box-shadow:var(--sombra-forte);opacity:0;transform:translateY(10px);pointer-events:none;transition:all .25s;
+}
+.toast.ver{opacity:1;transform:translateY(0);}
+.erro-envio{background:#f7d4cf;border:1.5px solid #e49b90;color:#8a2b1c;border-radius:var(--raio);padding:12px 14px;font-weight:700;font-size:14px;margin-top:14px;}
+.carregando{display:inline-block;width:18px;height:18px;border:3px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:girar .8s linear infinite;vertical-align:middle;margin-right:8px;}
+@keyframes girar{to{transform:rotate(360deg);}}
+
+/* Já respondeu */
+.ja-respondeu{text-align:center;padding:40px 10px;}
+.link-pequeno{display:inline-block;margin-top:14px;color:var(--azul);font-weight:700;font-size:13px;text-decoration:underline;background:none;border:none;}
+
+@media (min-width:600px){ .nps-grade{grid-template-columns:repeat(11,1fr);} }
+</style>
+</head>
+<body class="sem-progresso">
+
+<!-- Barra de progresso (escondida fora das perguntas) -->
+<div id="barraProgressoWrap" style="display:none">
+  <div id="barraRotulo"><span id="barraTexto">Pergunta 1 de 18</span><span id="barraPercent">0%</span></div>
+  <div id="barraTrilho"><div id="barraPreenche"></div></div>
+</div>
+
+<!-- Logo (aparece nas telas de abertura e final) -->
+<div class="topo-logo" id="topoLogo">
+  <img src="logo.png" alt="Fercomp" onerror="this.style.display='none';document.getElementById('textoLogo').style.display='inline';">
+  <span class="texto-logo" id="textoLogo" style="display:none">FERCOMP</span>
+</div>
+
+<!-- Conteúdo -->
+<main id="app"></main>
+
+<!-- Rodapé com botões -->
+<div id="rodape" class="escondido">
+  <button class="btn-voltar" id="btVoltar" type="button" aria-label="Voltar para a pergunta anterior">‹ Voltar</button>
+  <button class="btn-pular" id="btPular" type="button" style="display:none">Pular</button>
+  <button class="btn btn-laranja" id="btContinuar" type="button">Continuar</button>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+/* =========================================================================
+   PESQUISA DE CLIENTES FERCOMP
+   -------------------------------------------------------------------------
+   PARA A EQUIPE: para trocar o texto de uma pergunta, edite o array
+   PERGUNTAS abaixo. Cada item tem:
+     - secao   : nome da seção mostrado acima da pergunta
+     - chave   : nome da coluna na planilha (NÃO mudar sem avisar o técnico)
+     - texto   : o enunciado da pergunta
+     - tipo    : "unica" | "multi" | "nota5" | "nps" | "aberta"
+     - opcoes  : lista de alternativas (para unica/multi)
+     - limite  : máximo de escolhas (para multi; 0 = sem limite)
+     - aspectos: lista de linhas com {nome, chave} (para nota5)
+     - chaveOutro: coluna onde o texto de "Outro" é guardado
+     - obrig   : true se a pergunta é obrigatória (abertas são false)
+   Uma opção pode ser um texto simples OU um objeto:
+     { label:"Outro", outro:true }       -> abre campo de texto
+     { label:"Não vejo diferença", exclusiva:true } -> desmarca as outras
+   ========================================================================= */
+
+var PERGUNTAS = [
+  /* ---- SEÇÃO 1 ---- */
+  { secao:"1. Sobre seu negócio", chave:"q1_tempo_marcenaria", tipo:"unica", obrig:true,
+    texto:"Há quanto tempo você trabalha com marcenaria?",
+    opcoes:["Menos de 1 ano","De 1 a 3 anos","De 3 a 5 anos","Mais de 5 anos"] },
+
+  { secao:"1. Sobre seu negócio", chave:"q2_tamanho_negocio", tipo:"unica", obrig:true,
+    texto:"Qual é o tamanho aproximado do seu negócio?",
+    opcoes:["Trabalho sozinho","Trabalho com 1 ou 2 funcionários","Trabalho com 3 a 5 funcionários","Trabalho com mais de 5 funcionários"] },
+
+  { secao:"1. Sobre seu negócio", chave:"q3_tipo_trabalho", tipo:"unica", obrig:true, chaveOutro:"q3_outro",
+    texto:"Qual é o seu principal tipo de trabalho?",
+    opcoes:["Móveis planejados residenciais","Móveis comerciais","Cozinhas e dormitórios","Móveis sob medida em geral",{label:"Outros",outro:true}] },
+
+  /* ---- SEÇÃO 2 ---- */
+  { secao:"2. Como você escolhe seu fornecedor?", chave:"q4_criterios_decisao", tipo:"multi", limite:3, obrig:true,
+    texto:"O que mais pesa na sua decisão de comprar de um fornecedor de materiais para marcenaria?",
+    ajuda:"Marque até 3",
+    opcoes:["Preço dos produtos","Disponibilidade de estoque","Qualidade dos materiais","Rapidez na entrega","Qualidade do corte e da fitagem","Condições de pagamento","Atendimento e relacionamento","Facilidade para resolver problemas","Variedade de produtos","Confiança no fornecedor"] },
+
+  { secao:"2. Como você escolhe seu fornecedor?", chave:"q5_onde_compra", tipo:"unica", obrig:true,
+    texto:"Atualmente, onde você compra a maior parte dos seus materiais?",
+    opcoes:["Fercomp","Outro fornecedor","Divido minhas compras entre vários fornecedores"] },
+
+  { secao:"2. Como você escolhe seu fornecedor?", chave:"q6_motivo_outro_fornecedor", tipo:"multi", limite:0, obrig:true, chaveOutro:"q6_outro",
+    texto:"O que faz você comprar de outro fornecedor, mesmo sendo cliente da Fercomp?",
+    ajuda:"Marque todas que se aplicam",
+    opcoes:["Preço mais baixo","Produto que não encontro na Fercomp","Melhor prazo de pagamento","Entrega mais rápida","Melhor qualidade de corte ou fitagem","Melhor atendimento","Promoções",{label:"Não costumo comprar de outros fornecedores",exclusiva:true},{label:"Outro motivo",outro:true}] },
+
+  { secao:"2. Como você escolhe seu fornecedor?", chave:"q7_fercomp_melhor_em", tipo:"multi", limite:0, obrig:true, chaveOutro:"q7_outro",
+    texto:"Quando você compara a Fercomp com outros fornecedores, em quais aspectos considera que a Fercomp é melhor?",
+    ajuda:"Marque todas que se aplicam",
+    opcoes:["Preço","Atendimento","Estoque e variedade","Corte e fitagem","Entrega","Condições de pagamento","Facilidade para comprar","Relacionamento e confiança",{label:"Não vejo diferença significativa",exclusiva:true},{label:"Outro",outro:true}] },
+
+  /* ---- SEÇÃO 3 ---- */
+  { secao:"3. O que podemos melhorar?", chave:"q8", tipo:"nota5", obrig:true,
+    texto:"De 1 a 5, como você avalia a Fercomp nos seguintes aspectos?",
+    ajuda:"1 = Muito ruim · 2 = Ruim · 3 = Regular · 4 = Bom · 5 = Excelente",
+    aspectos:[
+      {nome:"Preços", chave:"q8_precos"},
+      {nome:"Variedade de produtos", chave:"q8_variedade"},
+      {nome:"Disponibilidade de MDF", chave:"q8_disp_mdf"},
+      {nome:"Disponibilidade de ferragens", chave:"q8_disp_ferragens"},
+      {nome:"Qualidade do corte", chave:"q8_qual_corte"},
+      {nome:"Qualidade da fitagem", chave:"q8_qual_fitagem"},
+      {nome:"Prazo de entrega", chave:"q8_prazo_entrega"},
+      {nome:"Atendimento dos vendedores", chave:"q8_atendimento"},
+      {nome:"Condições de pagamento", chave:"q8_cond_pagamento"},
+      {nome:"Resolução de problemas", chave:"q8_resolucao_problemas"}
+    ] },
+
+  { secao:"3. O que podemos melhorar?", chave:"q9_maior_dificuldade", tipo:"aberta", obrig:true,
+    texto:"Qual é a maior dificuldade que você enfrenta atualmente para comprar materiais para sua marcenaria?",
+    placeholder:"Ex.: às vezes falta o MDF que preciso e atrasa a obra..." },
+
+  { secao:"3. O que podemos melhorar?", chave:"q10_atrasa_projetos", tipo:"multi", limite:0, obrig:true, chaveOutro:"q10_outro",
+    texto:"O que mais costuma atrasar ou dificultar a execução dos seus projetos?",
+    ajuda:"Marque todas que se aplicam",
+    opcoes:["Falta de material no fornecedor","Atraso na entrega","Demora no corte ou fitagem","Erros no pedido","Falta de crédito ou condições de pagamento","Dificuldade para encontrar determinados produtos","Problemas com clientes ou mudanças no projeto",{label:"Outro",outro:true}] },
+
+  { secao:"3. O que podemos melhorar?", chave:"q11_melhorar_imediatamente", tipo:"aberta", obrig:true,
+    texto:"O que você gostaria que a Fercomp melhorasse imediatamente?",
+    placeholder:"Ex.: avisar quando o pedido estiver separado..." },
+
+  /* ---- SEÇÃO 4 ---- */
+  { secao:"4. Como podemos nos diferenciar?", chave:"q12_servicos_comprar_mais", tipo:"multi", limite:3, obrig:true, chaveOutro:"q12_outro",
+    texto:"Quais serviços fariam você comprar mais vezes na Fercomp?",
+    ajuda:"Marque até 3",
+    opcoes:["Entrega mais rápida","Entrega programada conforme a necessidade do projeto","Atendimento prioritário","Orçamento mais rápido","Mais opções de pagamento","Programa de benefícios para clientes frequentes","Descontos por volume de compra","Maior variedade de MDF e ferragens","Serviço de corte e fitagem mais rápido","Separação antecipada dos pedidos",{label:"Outro",outro:true}] },
+
+  { secao:"4. Como podemos nos diferenciar?", chave:"q13_entrega_programada", tipo:"unica", obrig:true,
+    texto:"Se a Fercomp oferecesse um serviço de entrega programada, permitindo que você recebesse os materiais na data combinada para executar seu projeto, isso seria útil para você?",
+    opcoes:["Muito útil","Útil","Pouco útil","Não utilizaria"] },
+
+  { secao:"4. Como podemos nos diferenciar?", chave:"q14_programa_beneficios", tipo:"unica", obrig:true,
+    texto:"Você teria interesse em um programa de benefícios para clientes frequentes da Fercomp?",
+    opcoes:["Sim, com descontos","Sim, com benefícios exclusivos","Sim, com vantagens em serviços e entregas","Sim, com condições comerciais especiais","Não tenho interesse"] },
+
+  { secao:"4. Como podemos nos diferenciar?", chave:"q15_concentrar_compras", tipo:"aberta", obrig:true,
+    texto:"O que faria você concentrar ainda mais suas compras na Fercomp?",
+    placeholder:"Ex.: melhores condições, mais variedade, entrega..." },
+
+  /* ---- SEÇÃO 5 ---- */
+  { secao:"5. Sua relação com a Fercomp", chave:"q16_nps", tipo:"nps", obrig:true,
+    texto:"De 0 a 10, o quanto você recomendaria a Fercomp para outro marceneiro?" },
+
+  { secao:"5. Sua relação com a Fercomp", chave:"q17_motivo_nota", tipo:"aberta", obrig:true,
+    texto:"Qual é o principal motivo da sua nota?",
+    placeholder:"Conte pra gente o motivo...", usaNota:true },
+
+  { secao:"5. Sua relação com a Fercomp", chave:"q18_unica_mudanca", tipo:"aberta", obrig:true,
+    texto:"Se você pudesse pedir uma única mudança à Fercomp para tornar sua vida como marceneiro mais fácil, qual seria?",
+    placeholder:"A mudança que faria mais diferença pra você..." }
+];
+
+var TOTAL = PERGUNTAS.length; // 18
+
+/* ===================== ESTADO ===================== */
+var CHAVE_RASCUNHO = "fercomp_pesquisa_rascunho_v1";
+var CHAVE_ENVIADO = "fercomp_pesquisa_enviado_v1";
+
+var estado = {
+  tela: "abertura",     // abertura | pergunta | revisao | enviando | final | jarespondeu
+  idx: 0,               // índice da pergunta atual
+  respostas: {},        // { chave: valor }
+  inicio: null,         // timestamp de início (para tempo de resposta)
+  origem: "direto",
+  vendedor: ""
+};
+
+/* Lê parâmetros da URL (?origem= &vendedor=) */
+(function lerUrl(){
+  try{
+    var p = new URLSearchParams(location.search);
+    estado.origem = (p.get("origem") || "direto").toLowerCase();
+    estado.vendedor = (p.get("vendedor") || "").toLowerCase();
+  }catch(e){}
+})();
+
+/* Rascunho automático (localStorage, com try/catch) */
+function salvarRascunho(){
+  try{
+    localStorage.setItem(CHAVE_RASCUNHO, JSON.stringify({
+      idx: estado.idx, respostas: estado.respostas, inicio: estado.inicio, tela: estado.tela
+    }));
+  }catch(e){}
+}
+function carregarRascunho(){
+  try{
+    var r = JSON.parse(localStorage.getItem(CHAVE_RASCUNHO) || "null");
+    if(r && r.respostas){
+      estado.respostas = r.respostas;
+      estado.idx = r.idx || 0;
+      estado.inicio = r.inicio || null;
+    }
+  }catch(e){}
+}
+function limparRascunho(){ try{ localStorage.removeItem(CHAVE_RASCUNHO);}catch(e){} }
+function jaEnviou(){ try{ return localStorage.getItem(CHAVE_ENVIADO) === "1"; }catch(e){ return false; } }
+
+/* ===================== UTILIDADES DE UI ===================== */
+var app = document.getElementById("app");
+var rodape = document.getElementById("rodape");
+var btVoltar = document.getElementById("btVoltar");
+var btPular = document.getElementById("btPular");
+var btContinuar = document.getElementById("btContinuar");
+var barraWrap = document.getElementById("barraProgressoWrap");
+var topoLogo = document.getElementById("topoLogo");
+var toastTimer = null;
+
+function toast(msg){
+  var t = document.getElementById("toast");
+  t.textContent = msg; t.classList.add("ver");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function(){ t.classList.remove("ver"); }, 2200);
+}
+function esc(s){ return String(s==null?"":s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c];}); }
+function labelOpcao(o){ return (typeof o === "string") ? o : o.label; }
+
+/* ===================== TELA DE ABERTURA ===================== */
+function telaAbertura(){
+  estado.tela = "abertura";
+  document.body.classList.add("sem-progresso");
+  barraWrap.style.display="none"; topoLogo.style.display="flex"; rodape.classList.add("escondido");
+  app.innerHTML =
+    '<div class="bloco-centro">'+
+      '<h1 class="titulo-abertura">PESQUISA DE CLIENTES FERCOMP</h1>'+
+      '<p class="sub-abertura">Queremos entender você para oferecer um atendimento e uma experiência comercial cada vez melhores.</p>'+
+      '<div class="texto-abertura">'+
+        '<p style="margin:0 0 10px">Estamos realizando uma pesquisa rápida com nossos clientes para entender o que realmente importa para os marceneiros na hora de comprar materiais, quais são suas principais dificuldades e como a Fercomp pode melhorar.</p>'+
+        '<p style="margin:0">Sua opinião é muito importante para nós. As respostas serão utilizadas para aprimorar nossos produtos, serviços e condições comerciais.</p>'+
+      '</div>'+
+      '<div class="selo">⏱ Tempo estimado: 5 minutos.</div><br>'+
+      '<button class="btn btn-laranja" id="btComecar" style="max-width:320px;margin:0 auto;width:100%">Começar pesquisa</button>'+
+    '</div>';
+  document.getElementById("btComecar").onclick = function(){
+    if(!estado.inicio) estado.inicio = Date.now();
+    estado.tela = "pergunta";
+    irPara(estado.idx || 0);
+  };
+}
+
+/* ===================== RENDERIZAR UMA PERGUNTA ===================== */
+function irPara(i){
+  estado.idx = Math.max(0, Math.min(TOTAL-1, i));
+  estado.tela = "pergunta";
+  salvarRascunho();
+  renderPergunta();
+  window.scrollTo(0,0);
+}
+
+function renderPergunta(){
+  var q = PERGUNTAS[estado.idx];
+  document.body.classList.remove("sem-progresso");
+  topoLogo.style.display="none";
+  barraWrap.style.display="block";
+  rodape.classList.remove("escondido");
+
+  // Barra de progresso
+  var num = estado.idx + 1;
+  var pct = Math.round((num/TOTAL)*100);
+  document.getElementById("barraTexto").textContent = "Pergunta "+num+" de "+TOTAL;
+  document.getElementById("barraPercent").textContent = pct+"%";
+  document.getElementById("barraPreenche").style.width = pct+"%";
+
+  // Botões
+  btVoltar.style.visibility = (estado.idx===0) ? "hidden" : "visible";
+  btVoltar.onclick = function(){ irPara(estado.idx-1); };
+  btPular.style.display = "none";
+  btContinuar.style.display = "block";
+  btContinuar.textContent = (estado.idx===TOTAL-1) ? "Revisar respostas" : "Continuar";
+
+  // Enunciado
+  var enunciado = q.texto;
+  if(q.usaNota){
+    var nota = estado.respostas["q16_nps"];
+    if(nota!==undefined && nota!=="") enunciado = "Você deu nota "+nota+". Qual é o principal motivo?";
+  }
+  var html =
+    '<div class="pergunta-secao">'+esc(q.secao)+'</div>'+
+    '<h2 class="pergunta-texto">'+esc(enunciado)+'</h2>'+
+    (q.ajuda ? '<div class="pergunta-ajuda">'+esc(q.ajuda)+'</div>' : '');
+
+  if(q.tipo==="unica" || q.tipo==="multi") html += render_opcoes(q);
+  else if(q.tipo==="nota5") html += render_nota5(q);
+  else if(q.tipo==="nps") html += render_nps(q);
+  else if(q.tipo==="aberta") html += render_aberta(q);
+
+  app.innerHTML = html;
+
+  if(q.tipo==="unica"||q.tipo==="multi") ligar_opcoes(q);
+  else if(q.tipo==="nota5") ligar_nota5(q);
+  else if(q.tipo==="nps") ligar_nps(q);
+  else if(q.tipo==="aberta") ligar_aberta(q);
+
+  atualizarContinuar();
+}
+
+/* ---------- UNICA / MULTI ---------- */
+function render_opcoes(q){
+  var sel = q.tipo==="multi" ? (estado.respostas[q.chave]||[]) : estado.respostas[q.chave];
+  var h = "";
+  if(q.tipo==="multi" && q.limite>0){
+    var n = (estado.respostas[q.chave]||[]).length;
+    h += '<div class="contador" id="contador">'+n+' de '+q.limite+' selecionadas</div>';
+  } else if(q.tipo==="multi"){
+    h += '<div class="contador" id="contador">Marque todas que se aplicam</div>';
+  }
+  h += '<div class="lista-opcoes">';
+  q.opcoes.forEach(function(o, k){
+    var lab = labelOpcao(o);
+    var marcado = q.tipo==="multi" ? (sel.indexOf(lab)>=0) : (sel===lab);
+    h += '<button type="button" class="card-opcao'+(marcado?' sel':'')+'" data-lab="'+esc(lab)+'" aria-pressed="'+marcado+'">'+
+           '<span class="marca">'+(marcado?'✓':'')+'</span>'+
+           '<span>'+esc(lab)+'</span>'+
+         '</button>';
+  });
+  h += '</div>';
+  // Campo "Outro"
+  if(q.chaveOutro){
+    var mostra = precisaOutro(q);
+    h += '<div class="campo-outro" id="campoOutro" style="'+(mostra?'':'display:none')+'">'+
+           '<div class="rotulo-campo">Conte mais (opcional):</div>'+
+           '<input class="txt" id="txtOutro" type="text" maxlength="200" placeholder="Digite aqui..." value="'+esc(estado.respostas[q.chaveOutro]||'')+'">'+
+         '</div>';
+  }
+  return h;
+}
+function precisaOutro(q){
+  if(q.tipo==="multi"){
+    var sel = estado.respostas[q.chave]||[];
+    return q.opcoes.some(function(o){ return typeof o==="object" && o.outro && sel.indexOf(o.label)>=0; });
+  } else {
+    var v = estado.respostas[q.chave];
+    return q.opcoes.some(function(o){ return typeof o==="object" && o.outro && o.label===v; });
+  }
+}
+function ligar_opcoes(q){
+  var cards = app.querySelectorAll(".card-opcao");
+  cards.forEach(function(card){
+    card.addEventListener("click", function(){
+      var lab = card.getAttribute("data-lab");
+      var opc = q.opcoes.find(function(o){ return labelOpcao(o)===lab; });
+
+      if(q.tipo==="unica"){
+        estado.respostas[q.chave] = lab;
+      } else {
+        var sel = estado.respostas[q.chave] ? estado.respostas[q.chave].slice() : [];
+        var jaTem = sel.indexOf(lab)>=0;
+        var ehExclusiva = (typeof opc==="object" && opc.exclusiva);
+
+        if(jaTem){
+          sel = sel.filter(function(x){return x!==lab;});
+        } else {
+          // Opção exclusiva (ex.: "Não vejo diferença"): limpa as outras
+          if(ehExclusiva){ sel = [lab]; }
+          else {
+            // Remove qualquer exclusiva marcada antes
+            sel = sel.filter(function(x){
+              var ox = q.opcoes.find(function(o){return labelOpcao(o)===x;});
+              return !(typeof ox==="object" && ox.exclusiva);
+            });
+            // Respeita o limite
+            if(q.limite>0 && sel.length>=q.limite){
+              toast("Você já escolheu "+q.limite+". Desmarque uma para trocar.");
+              return;
+            }
+            sel.push(lab);
+          }
+        }
+        estado.respostas[q.chave] = sel;
+      }
+      salvarRascunho();
+
+      // Avanço automático nas de escolha única
+      if(q.tipo==="unica"){
+        // Se abriu "Outro", não avança sozinho (deixa digitar)
+        if(precisaOutro(q)){ renderPergunta(); return; }
+        renderPergunta();
+        setTimeout(function(){ avancar(); }, 350);
+      } else {
+        renderPergunta();
+      }
+    });
+  });
+  var txt = document.getElementById("txtOutro");
+  if(txt){
+    txt.addEventListener("input", function(){ estado.respostas[q.chaveOutro]=txt.value; salvarRascunho(); });
+  }
+}
+
+/* ---------- NOTA 1 a 5 (Q8) ---------- */
+function render_nota5(q){
+  var h = '<div class="nota-legenda">1 Muito ruim · 5 Excelente</div>';
+  q.aspectos.forEach(function(a){
+    var atual = estado.respostas[a.chave];
+    h += '<div class="aspecto"><div class="aspecto-nome">'+esc(a.nome)+'</div><div class="nota-botoes" data-chave="'+a.chave+'" role="group" aria-label="'+esc(a.nome)+'">';
+    for(var n=1;n<=5;n++){
+      h += '<button type="button" class="nota-bt'+(String(atual)===String(n)?' sel':'')+'" data-n="'+n+'" aria-label="'+esc(a.nome)+': nota '+n+'">'+n+'</button>';
+    }
+    h += '</div></div>';
+  });
+  return h;
+}
+function ligar_nota5(q){
+  app.querySelectorAll(".nota-botoes").forEach(function(grupo){
+    var chave = grupo.getAttribute("data-chave");
+    grupo.querySelectorAll(".nota-bt").forEach(function(bt){
+      bt.addEventListener("click", function(){
+        estado.respostas[chave] = Number(bt.getAttribute("data-n"));
+        grupo.querySelectorAll(".nota-bt").forEach(function(b){ b.classList.remove("sel"); });
+        bt.classList.add("sel");
+        salvarRascunho();
+        atualizarContinuar();
+      });
+    });
+  });
+}
+
+/* ---------- NPS 0 a 10 (Q16) ---------- */
+function render_nps(q){
+  var atual = estado.respostas[q.chave];
+  var h = '<div class="nps-grade">';
+  for(var n=0;n<=10;n++){
+    var cor = n<=6 ? "vermelho" : (n<=8 ? "amarelo" : "verde");
+    h += '<button type="button" class="nps-bt '+cor+(String(atual)===String(n)?' sel':'')+'" data-n="'+n+'" aria-label="Nota '+n+'">'+n+'</button>';
+  }
+  h += '</div><div class="nps-legendas"><span>Não recomendaria</span><span>Recomendaria com certeza</span></div>';
+  return h;
+}
+function ligar_nps(q){
+  app.querySelectorAll(".nps-bt").forEach(function(bt){
+    bt.addEventListener("click", function(){
+      estado.respostas[q.chave] = Number(bt.getAttribute("data-n"));
+      app.querySelectorAll(".nps-bt").forEach(function(b){ b.classList.remove("sel"); });
+      bt.classList.add("sel");
+      salvarRascunho();
+      renderPergunta();
+      setTimeout(function(){ avancar(); }, 350);
+    });
+  });
+}
+
+/* ---------- ABERTA ---------- */
+function render_aberta(q){
+  return '<textarea class="txt" id="txtAberta" maxlength="1000" placeholder="'+esc(q.placeholder||'Escreva aqui...')+'">'+esc(estado.respostas[q.chave]||'')+'</textarea>';
+}
+function ligar_aberta(q){
+  // "Pular" só aparece em perguntas abertas opcionais (obrig:false)
+  btPular.style.display = q.obrig ? "none" : "inline-block";
+  btPular.onclick = function(){ estado.respostas[q.chave]=document.getElementById("txtAberta").value; salvarRascunho(); avancar(); };
+  var t = document.getElementById("txtAberta");
+  t.addEventListener("input", function(){ estado.respostas[q.chave]=t.value; salvarRascunho(); atualizarContinuar(); });
+}
+
+/* ===================== VALIDAÇÃO / NAVEGAÇÃO ===================== */
+function respondida(q){
+  if(q.tipo==="unica") return !!estado.respostas[q.chave];
+  if(q.tipo==="multi") return (estado.respostas[q.chave]||[]).length>0;
+  if(q.tipo==="nps")   return estado.respostas[q.chave]!==undefined && estado.respostas[q.chave]!=="";
+  if(q.tipo==="nota5") return q.aspectos.every(function(a){ var v=estado.respostas[a.chave]; return v!==undefined && v!==""; });
+  if(q.tipo==="aberta") return !!(estado.respostas[q.chave] && String(estado.respostas[q.chave]).trim()); // precisa de texto
+  return false;
+}
+function atualizarContinuar(){
+  var q = PERGUNTAS[estado.idx];
+  var ok = !q.obrig || respondida(q);
+  btContinuar.disabled = !ok;
+  // Contador da múltipla
+  var cont = document.getElementById("contador");
+  if(cont && q.tipo==="multi" && q.limite>0){
+    var n = (estado.respostas[q.chave]||[]).length;
+    cont.innerHTML = n+' de '+q.limite+' selecionadas';
+  }
+}
+btContinuar.onclick = function(){
+  var q = PERGUNTAS[estado.idx];
+  if(q.obrig && !respondida(q)){
+    if(q.tipo==="nota5") toast("Dê uma nota em todos os aspectos para continuar.");
+    else toast("Escolha uma opção para continuar.");
+    return;
+  }
+  avancar();
+};
+function avancar(){
+  if(estado.idx >= TOTAL-1){ telaRevisao(); }
+  else { irPara(estado.idx+1); }
+}
+
+/* ===================== TELA DE REVISÃO ===================== */
+function resumoResposta(q){
+  if(q.tipo==="multi"){
+    var sel = estado.respostas[q.chave]||[];
+    var extra = (q.chaveOutro && estado.respostas[q.chaveOutro]) ? ' ('+estado.respostas[q.chaveOutro]+')' : '';
+    return sel.length ? (sel.join(", ")+extra) : "";
+  }
+  if(q.tipo==="nota5"){
+    return q.aspectos.map(function(a){ return a.nome+": "+(estado.respostas[a.chave]||"-"); }).join(" · ");
+  }
+  if(q.tipo==="unica"){
+    var v = estado.respostas[q.chave]||"";
+    var extra2 = (q.chaveOutro && estado.respostas[q.chaveOutro]) ? ' ('+estado.respostas[q.chaveOutro]+')' : '';
+    return v ? (v+extra2) : "";
+  }
+  return estado.respostas[q.chave]||"";
+}
+function telaRevisao(){
+  estado.tela="revisao";
+  window.scrollTo(0,0);
+  topoLogo.style.display="none"; barraWrap.style.display="none";
+  document.body.classList.add("sem-progresso");
+  rodape.classList.add("escondido");
+  var h = '<h2 class="pergunta-texto" style="margin-top:6px">Revise suas respostas</h2>'+
+          '<p class="pergunta-ajuda">Toque em "editar" para ajustar qualquer uma.</p>';
+  PERGUNTAS.forEach(function(q, i){
+    var resp = resumoResposta(q);
+    h += '<div class="rev-item">'+
+           '<div><div class="rev-pergunta">'+(i+1)+'. '+esc(q.texto.length>60?q.texto.slice(0,60)+'…':q.texto)+'</div>'+
+           '<div class="rev-resposta '+(resp?'':'rev-vazia')+'">'+esc(resp||"(não respondida)")+'</div></div>'+
+           '<button class="rev-editar" data-i="'+i+'">editar</button>'+
+         '</div>';
+  });
+  h += '<button class="btn btn-laranja" id="btEnviar" style="width:100%;margin-top:16px">Enviar respostas</button>'+
+       '<div id="areaErro"></div>';
+  app.innerHTML = h;
+  app.querySelectorAll(".rev-editar").forEach(function(b){
+    b.onclick = function(){ irPara(Number(b.getAttribute("data-i"))); };
+  });
+  document.getElementById("btEnviar").onclick = enviar;
+}
+
+/* ===================== ENVIO ===================== */
+function montarDados(){
+  var d = {};
+  // Metadados
+  d.id = "r_"+Date.now()+"_"+Math.random().toString(36).slice(2,7);
+  d.data_hora = formatarData(new Date());
+  d.origem = estado.origem;
+  d.vendedor = estado.vendedor;
+  d.dispositivo = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent) ? "celular" : "computador";
+  d.tempo_resposta_seg = estado.inicio ? Math.round((Date.now()-estado.inicio)/1000) : "";
+  // Respostas
+  PERGUNTAS.forEach(function(q){
+    if(q.tipo==="nota5"){
+      q.aspectos.forEach(function(a){ d[a.chave] = estado.respostas[a.chave] || ""; });
+    } else if(q.tipo==="multi"){
+      d[q.chave] = (estado.respostas[q.chave]||[]).join("; ");
+    } else {
+      d[q.chave] = estado.respostas[q.chave] || "";
+    }
+    if(q.chaveOutro) d[q.chaveOutro] = estado.respostas[q.chaveOutro] || "";
+  });
+  // Categoria NPS (o Apps Script recalcula, mas mandamos também)
+  var nps = Number(estado.respostas["q16_nps"]);
+  d.q16_categoria = isNaN(nps) ? "" : (nps>=9?"Promotor":(nps>=7?"Neutro":"Detrator"));
+  return d;
+}
+function formatarData(dt){
+  function z(n){return (n<10?"0":"")+n;}
+  return dt.getFullYear()+"-"+z(dt.getMonth()+1)+"-"+z(dt.getDate())+" "+z(dt.getHours())+":"+z(dt.getMinutes())+":"+z(dt.getSeconds());
+}
+function enviar(){
+  var bt = document.getElementById("btEnviar");
+  var url = (window.CONFIG_FERCOMP && window.CONFIG_FERCOMP.APPS_SCRIPT_URL) || "";
+  if(!url || url.indexOf("COLE_AQUI")>=0){
+    mostrarErro("O link do servidor ainda não foi configurado (config.js).");
+    return;
+  }
+  bt.disabled = true;
+  bt.innerHTML = '<span class="carregando"></span>Enviando...';
+  var dados = montarDados();
+
+  fetch(url, {
+    method:"POST",
+    mode:"no-cors",
+    headers:{"Content-Type":"text/plain;charset=utf-8"},
+    body: JSON.stringify(dados)
+  }).then(function(){
+    // Com no-cors não dá para ler a resposta; assumimos sucesso.
+    try{ localStorage.setItem(CHAVE_ENVIADO,"1"); }catch(e){}
+    limparRascunho();
+    telaFinal();
+  }).catch(function(){
+    bt.disabled=false; bt.textContent="Enviar respostas";
+    mostrarErro("Sem internet. Suas respostas foram guardadas. Toque em Enviar de novo.");
+  });
+}
+function mostrarErro(msg){
+  var area = document.getElementById("areaErro");
+  if(area) area.innerHTML = '<div class="erro-envio">⚠ '+esc(msg)+'</div>';
+  else toast(msg);
+}
+
+/* ===================== TELA FINAL ===================== */
+function telaFinal(){
+  estado.tela="final";
+  window.scrollTo(0,0);
+  topoLogo.style.display="flex"; barraWrap.style.display="none"; rodape.classList.add("escondido");
+  document.body.classList.add("sem-progresso");
+  var wp = (window.CONFIG_FERCOMP && window.CONFIG_FERCOMP.WHATSAPP_URL) || "https://linkme.bio/fercompcariri";
+  app.innerHTML =
+    '<div class="card-final">'+
+      '<div class="check-grande">✓</div>'+
+      '<h2 style="font-size:22px;margin-bottom:10px">Obrigado por contribuir com a Fercomp!</h2>'+
+      '<p style="font-weight:500;color:#525a61">Sua opinião nos ajuda a construir uma empresa cada vez mais preparada para atender às necessidades dos marceneiros.</p>'+
+      '<a href="'+esc(wp)+'" class="btn btn-laranja" style="display:flex;align-items:center;justify-content:center;text-decoration:none;margin-top:22px">Voltar para o WhatsApp da Fercomp</a>'+
+    '</div>';
+}
+
+/* ===================== JÁ RESPONDEU ===================== */
+function telaJaRespondeu(){
+  estado.tela="jarespondeu";
+  topoLogo.style.display="flex"; barraWrap.style.display="none"; rodape.classList.add("escondido");
+  document.body.classList.add("sem-progresso");
+  app.innerHTML =
+    '<div class="ja-respondeu">'+
+      '<div class="check-grande" style="background:var(--azul)">✓</div>'+
+      '<h2 style="font-size:22px">Você já respondeu, obrigado!</h2>'+
+      '<p style="font-weight:500;color:#525a61">Recebemos sua participação nesta pesquisa.</p>'+
+      '<button class="link-pequeno" id="btNovamente">Outra pessoa vai responder? Responder novamente</button>'+
+    '</div>';
+  document.getElementById("btNovamente").onclick = function(){
+    try{ localStorage.removeItem(CHAVE_ENVIADO); }catch(e){}
+    estado.respostas={}; estado.idx=0; estado.inicio=null;
+    limparRascunho();
+    telaAbertura();
+  };
+}
+
+/* ===================== INÍCIO ===================== */
+(function iniciar(){
+  if(jaEnviou()){ telaJaRespondeu(); return; }
+  carregarRascunho();
+  telaAbertura();
+})();
+</script>
+</body>
+</html>
